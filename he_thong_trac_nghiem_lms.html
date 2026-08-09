@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS Trắc Nghiệm - Chủ nghĩa xã hội khoa học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Tùy chỉnh scrollbar cho đẹp */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        .radio-custom:checked + div {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans overflow-hidden">
+
+    <!-- Mobile Header (Chỉ hiện trên điện thoại) -->
+    <div class="md:hidden bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div>
+            <h1 class="text-xl font-bold text-blue-600 uppercase">LMS Trắc Nghiệm</h1>
+            <p class="text-xs text-gray-500">Môn: Chủ nghĩa xã hội khoa học</p>
+        </div>
+        <button id="mobileMenuBtn" class="p-2 text-gray-600 hover:text-blue-600 focus:outline-none rounded-lg bg-gray-50 border">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <div class="flex h-[calc(100vh-73px)] md:h-screen w-full relative">
+        
+        <!-- Sidebar Overlay cho Mobile -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden transition-opacity"></div>
+
+        <!-- Sidebar / Mục lục -->
+        <aside id="sidebar" class="bg-white w-72 flex-shrink-0 border-r shadow-lg md:shadow-none h-full flex flex-col absolute md:static z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out left-0 top-0">
+            <!-- Sidebar Header (Chỉ hiện trên Desktop) -->
+            <div class="hidden md:block p-6 border-b bg-gray-50">
+                <h1 class="text-2xl font-bold text-blue-700 uppercase tracking-wider">LMS Trắc Nghiệm</h1>
+                <p class="text-sm text-gray-500 mt-1">Môn: Chủ nghĩa xã hội khoa học</p>
+            </div>
+            
+            <!-- Vùng chứa danh sách bài học -->
+            <div class="overflow-y-auto flex-1 p-4" id="nav-container">
+                <!-- Javascript sẽ render danh sách vào đây -->
+            </div>
+        </aside>
+
+        <!-- Main Content / Phần làm bài -->
+        <main class="flex-1 h-full overflow-y-auto bg-gray-50 relative w-full flex flex-col">
+            <!-- Header của bài làm -->
+            <div class="bg-white border-b p-4 md:p-6 sticky top-0 z-20 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 id="current-quiz-title" class="text-xl md:text-2xl font-bold text-gray-800">Chọn bài kiểm tra</h2>
+                    <p id="current-quiz-desc" class="text-sm text-gray-500 mt-1">Vui lòng chọn bài từ mục lục để bắt đầu.</p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <span id="quiz-status" class="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border">Trạng thái: Chưa bắt đầu</span>
+                </div>
+            </div>
+
+            <!-- Vùng chứa câu hỏi -->
+            <div id="quiz-container" class="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto w-full flex-1">
+                <!-- Javascript sẽ render câu hỏi vào đây -->
+                <div class="flex flex-col items-center justify-center h-full text-gray-400 mt-20">
+                    <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    <p>Chưa có bài kiểm tra nào được chọn.</p>
+                </div>
+            </div>
+
+            <!-- Vùng nút hành động -->
+            <div id="action-buttons" class="p-4 md:p-6 bg-white border-t sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] hidden max-w-4xl mx-auto w-full flex-col sm:flex-row gap-3">
+                <button id="btn-reset" class="w-full sm:w-1/3 py-3 px-4 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-colors flex justify-center items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Làm lại từ đầu
+                </button>
+                <button id="btn-submit" class="w-full sm:w-2/3 py-3 px-4 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex justify-center items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Nộp bài kiểm tra
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Kết Quả -->
+    <div id="result-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-6 md:p-8 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 text-center">
+            <div id="result-icon" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
+                <!-- Icon sẽ được chèn bằng JS -->
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2" id="result-title">Hoàn thành!</h3>
+            <p class="text-gray-600 mb-6" id="result-message">Bạn đã đạt <span class="font-bold text-lg text-blue-600" id="result-score">0/0</span> điểm.</p>
+            <button id="btn-close-modal" class="w-full py-2.5 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                Xem chi tiết
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU BÀI KIỂM TRA ---
+        const quizData = [
+            {
+                lessonTitle: "BÀI 1",
+                clos: [
+                    {
+                        title: "CLO1",
+                        questions: [
+                            { q: "Từ nghiên cứu các chế độ dân chủ trong lịch sử và thực tiễn cách mạng xã hội chủ nghĩa, các nhà sáng lập chủ nghĩa Mác – Lênin xác định dân chủ là:", options: ["sản phẩm và là thành quả của quá trình đấu tranh giai cấp cho những giá trị tiến bộ của nhân loại.", "một hình thức tổ chức nhà nước của giai cấp cầm quyền.", "một trong những nguyên tắc hoạt động của các tổ chức chính trị xã hội.", "tất cả đều đúng."], correct: 3 },
+                            { q: "“Trước sự liên minh của các đại biểu khoa học, giai cấp vô sản và giới kỹ thuật, không một thế lực đen tối nào đứng vững được”. Đây là khẳng định của", options: ["V.I. Lênin.", "C. Mác.", "Ph. Ăngghen.", "Hồ Chí Minh."], correct: 0 },
+                            { q: "Yếu tố quyết định sự liên minh giữa giai cấp CN, giai cấp ND và tầng lớp trí thức", options: ["Do giai cấp CN mong muốn", "Do cùng một kẻ thù là giai cấp TS", "Do có những lợi ích cơ bản thống nhất với nhau", "Do mục đích về chính trị của giai cấp CN"], correct: 2 },
+                            { q: "Tôn giáo là phạm trù lịch sử:", options: ["Vì tôn giáo ra đời phát triển cùng với con người", "Vì tôn giáo chỉ ra đời, tồn tại trong một giai đoạn nhất định của lịch sử loài người", "Vì tôn giáo xuất hiện rất sớm và nó ngày càng phát triển cùng với sự phát triển của loài người", "Vì tôn giáo phản ánh khát vọng của con người"], correct: 1 },
+                            { q: "Nền dân chủ xã hội chủ nghĩa có cơ sở kinh tế là:", options: ["Chế độ sở hữu hỗn hợp về tư liệu sản xuất.", "Chế độ tư hữu về tư liệu sản xuất.", "Chế độ công hữu về tư liệu sản xuất chủ yếu", "Chế độ quản lý và phân phối công bằng, hợp lý"], correct: 2 },
+                            { q: "Điền cụm từ vào chỗ trống để phù hợp với luận điểm của Lênin: “Nếu không liên minh với…thì không thể có được chính quyền của giai cấp vô sản, không thể nghĩ được đến việc duy trì chính quyền đó. Nguyên tắc cao nhất của chuyên chính là duy trì khối liên minh giữa giai cấp vô sản và nông dân để giai cấp vô sản có thể giữ được vai trò lãnh đạo và chính quyền nhà nước”.", options: ["trí thức", "nông dân", "tư sản", "tiểu thương"], correct: 1 },
+                            { q: "Để phát huy nguồn lực con người ở Việt Nam hiện nay cần phải thực hiện những phương hướng:", options: ["Đẩy mạnh sự nghiệp công nghiệp hóa, hiện đại hóa, phát triển nền kinh tế đất nước", "Xây dựng và từng bước hoàn chỉnh một hệ thống chính sách xã hội phù hợp.", "Từng bước xây dựng và không ngừng hoàn thiện cơ chế quản lý của chế độ xã hội chủ nghĩa", "Các phương án trên đều đúng"], correct: 3 },
+                            { q: "Cơ sở ra đời của Nhà nước trong thực tế lịch sử là do:", options: ["Yêu cầu tổ chức, tập hợp lực lượng chống thiên tai, địch họa.", "Yêu cầu tập hợp lực lượng đấu tranh bảo vệ tổ quốc.", "Yêu cầu của đấu tranh giai cấp, là công cụ của giai cấp cầm quyền.", "Yêu cầu của quản lý xã hội, mở rộng hợp tác quốc tế."], correct: 2 },
+                            { q: "Dân chủ XHCN ở Việt Nam được thực hiện thông qua các hình thức dân chủ", options: ["dân chủ trực tiếp và dân chủ gián tiếp.", "trưng cầu dân ý.", "dân chủ trực tiếp và trưng cầu ý dân.", "dân chủ gián tiếp và dân chủ đại diện."], correct: 0 },
+                            { q: "Cơ cấu xã hội có vai trò quan trọng nhất là:", options: ["Cơ cấu xã hội - nghề nghiệp", "Cơ cấu xã hội - dân tộc", "Cơ cấu xã hội - dân cư", "Cơ cấu xã hội - giai cấp"], correct: 3 }
+                        ]
+                    },
+                    {
+                        title: "CLO2",
+                        questions: [
+                            { q: "Liên minh giữa các giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức trong thời kì quá độ lên chủ nghĩa xã hội là:", options: ["Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết, hợp tác để cùng nhau xây dựng quan hệ sản xuất mới, xã hội chủ nghĩa .", "Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết , hợp tác để cùng nhau xây dựng đường lối phát triển kinh tế đúng đắn.", "Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết, hợp tác để cùng nhau xây dựng nguyên tắc phân phối mới.", "Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết hợp tác để cùng nhau phát triển sản xuất hàng hóa ngày càng thuận lợi."], correct: 0 },
+                            { q: "Liên minh giữa giai cấp công nhân với giai cấp nông dân và tầng lớp trí thức là liên minh đặc biệt, vì:", options: ["Trong liên minh đó, GCCN, giai cấp nông dân và tầng lớp tri thức chia nhau quyền lãnh đạo để đảm bảo sự công bằng trong xã hội", "Trong liên minh đó, GCCN, giai cấp nông dân và tầng lớp trí thức sẽ được quan tâm đặc biệt", "Trong liên minh đó, GCCN, giai cấp nông dân và tầng lớp trí thức không chia nhau quyền lãnh đạo, mà liên minh dưới sự lãnh đạo của một giai cấp – giai cấp công nhân", "Trong liên minh đó, GCCN , giai cấp nông dân và tầng lớp tri thức sẽ có thu nhập và mức sống như nhau."], correct: 2 },
+                            { q: "Chỉ rõ bản chất của tôn giáo, chủ nghĩa Mác- Lênin khẳng định:", options: ["Tôn giáo là một hiện tượng do chế độ phong kiến sáng tạo ra nhằm đảm bảo lợi ích của mình", "Tôn giáo sáng tạo ra con người", "Tôn giáo là một hiện tượng xã hội – văn hóa do con người sáng tạo ra", "Tôn giáo là một thực thể chủ quan của loài người"], correct: 2 },
+                            { q: "“Trong mọi thời đại lịch sử, sản xuất kinh tế và cơ cấu xã hội – cơ cấu này tất yếu phải do sản xuất kinh tế mà ra, cả hai cái đó cấu thành cơ sở của lịch sử chính trị và lịch sử tư tưởng của thời đại ấy...”. Đây là phát biểu của:", options: ["Ph. Ăngghen", "C. Mác", "V.I.Lênin", "C.Mác và Ph. Ăngghen"], correct: 0 },
+                            { q: "Không có một dân tộc nào ở Việt Nam cư trú tập trung và duy nhất trên một địa bàn, đây là đặc điểm cơ bản:", options: ["Các dân tộc ở Việt Nam có trình độ phát triển không đều", "Các dân tộc ở Việt Nam có truyền thống đoàn kết, gắn bó lâu đời trong cộng đồng dân tộc – quốc gia thống nhất", "Các dân tộc cư trú xen kẽ nhau", "Có sự chênh lệch về số dân giữa các tộc người"], correct: 2 }
+                        ]
+                    },
+                    {
+                        title: "CLO3",
+                        questions: [
+                            { q: "Đội ngũ thanh niên là chủ nhân tương lai của đất nước là lực lượng xung kích trong xây dựng và bảo vệ tổ quốc. Chăm lo, phát triển cho thanh niên vừa là mục tiêu vừa là động lực nhằm đảm bảo sự ổn định và phát triển bền vững của", options: ["đất nước.", "thanh niên.", "kinh tế.", "chính trị."], correct: 0 },
+                            { q: "“Dân chủ xã hội chủ nghĩa là bản chất của chế độ ta, vừa là ....., vừa là ..... của sự phát triển đất nước”. Điền cụm từ đúng vào đoạn trích trên.", options: ["Giá trị cốt lõi/ mục tiêu", "Mục tiêu/ động lực", "Động lực/ giá trị cốt lõi", "Mục tiêu/ giá trị cốt lõi"], correct: 1 },
+                            { q: "Đại hội XIII của Đảng nhấn mạnh: “Quyền lực của nhà nước là ..., có sự phân công rành mạnh, phối hợp chặt chẽ và tăng cường kiểm soát quyền lực nhà nước”. Điền cụm từ đúng vào đoạn trích trên.", options: ["Do nhà nước quản lý", "Do Đảng Cộng sản lãnh đạo", "Do dân làm chủ", "Thống nhất"], correct: 3 },
+                            { q: "Nguyên nhân xảy ra xung đột dân tộc, tôn giáo tại Việt Nam chủ yếu là do:", options: ["Chính sách chưa phù hợp của Đảng và Nhà nước đối với tình hình đất nước", "Thiếu sự đồng thuận từ nhân dân và các tổ chức quốc tế về nhân quyền", "Do nhận thức hoặc thực hiện chưa đúng chủ trương, đường lối, chính sách của Đảng và Nhà nước", "Do các thế lực thù địch khơi gợi nhằm chống phá sự đoàn kết thống nhất của dân tộc nhằm gây ra bất ổn chính trị quốc gia"], correct: 3 },
+                            { q: "“Mọi đường lối, chính sách của Đảng và pháp luật của Nhà nước đều vì lợi ích của nhân dân, có sự tham gia ý kiến của nhân dân”. Đây là khẳng định của:", options: ["Nhà nước Việt Nam", "Đảng Cộng sản Việt Nam", "Tòa án nhân dân Việt Nam", "Nhân dân Việt Nam"], correct: 1 }
+                        ]
+                    }
+                ]
+            },
+            {
+                lessonTitle: "BÀI 2",
+                clos: [
+                    {
+                        title: "CLO1",
+                        questions: [
+                            { q: "Liên minh giữa các giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức trong thời kì quá độ lên chủ nghĩa xã hội là:", options: ["Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết, hợp tác để cùng nhau xây dựng quan hệ sản xuất mới, xã hội chủ nghĩa .", "Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết , hợp tác để cùng nhau xây dựng đường lối phát triển kinh tế đúng đắn.", "Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết, hợp tác để cùng nhau xây dựng nguyên tắc phân phối mới.", "Giai cấp công nhân, giai cấp nông dân và tầng lớp trí thức đoàn kết hợp tác để cùng nhau phát triển sản xuất hàng hóa ngày càng thuận lợi."], correct: 0 },
+                            { q: "Liên minh giữa giai cấp công nhân với giai cấp nông dân và tầng lớp trí thức là liên minh đặc biệt, vì:", options: ["Trong liên minh đó, GCCN, giai cấp nông dân và tầng lớp tri thức chia nhau quyền lãnh đạo để đảm bảo sự công bằng trong xã hội", "Trong liên minh đó, GCCN, giai cấp nông dân và tầng lớp trí thức sẽ được quan tâm đặc biệt", "Trong liên minh đó, GCCN, giai cấp nông dân và tầng lớp trí thức không chia nhau quyền lãnh đạo, mà liên minh dưới sự lãnh đạo của một giai cấp – giai cấp công nhân", "Trong liên minh đó, GCCN , giai cấp nông dân và tầng lớp tri thức sẽ có thu nhập và mức sống như nhau."], correct: 2 },
+                            { q: "Chỉ rõ bản chất của tôn giáo, chủ nghĩa Mác- Lênin khẳng định:", options: ["Tôn giáo là một hiện tượng do chế độ phong kiến sáng tạo ra nhằm đảm bảo lợi ích của mình", "Tôn giáo sáng tạo ra con người", "Tôn giáo là một hiện tượng xã hội – văn hóa do con người sáng tạo ra", "Tôn giáo là một thực thể chủ quan của loài người"], correct: 2 },
+                            { q: "“Trong mọi thời đại lịch sử, sản xuất kinh tế và cơ cấu xã hội – cơ cấu này tất yếu phải do sản xuất kinh tế mà ra, cả hai cái đó cấu thành cơ sở của lịch sử chính trị và lịch sử tư tưởng của thời đại ấy...”. Đây là phát biểu của:", options: ["Ph. Ăngghen", "C. Mác", "V.I.Lênin", "C.Mác và Ph. Ăngghen"], correct: 0 },
+                            { q: "Không có một dân tộc nào ở Việt Nam cư trú tập trung và duy nhất trên một địa bàn, đây là đặc điểm cơ bản:", options: ["Các dân tộc ở Việt Nam có trình độ phát triển không đều", "Các dân tộc ở Việt Nam có truyền thống đoàn kết, gắn bó lâu đời trong cộng đồng dân tộc – quốc gia thống nhất", "Các dân tộc cư trú xen kẽ nhau", "Có sự chênh lệch về số dân giữa các tộc người"], correct: 2 }
+                        ]
+                    },
+                    {
+                        title: "CLO2",
+                        questions: [
+                            { q: "Tác phẩm được Lênin đánh giá là “tác phẩm chủ yếu và cơ bản trình bày chủ nghĩa xã hội khoa học” là:", options: ["Chống Đuyrinh", "Phê phán cương lĩnh Gôta", "Tư bản", "Hệ tư tưởng Đức"], correct: 0 },
+                            { q: "Điền từ thích hợp vào chỗ trống: “Thực hiện chính sách…,củng cố và mở rộng Mặt trận dân tộc thống nhất, tập hợp mọi lực lượng phấn đấu vì sự nghiệp dân giàu, nước mạnh”- Cương lĩnh xây dựng đất nước trong thời kỳ quá độ CNXH(1991).", options: ["Đại đoàn kết dân tộc", "Toàn Đảng toàn dân", "Kiên cường bất khuất", "Công nghiệp hóa-hiện đại hóa"], correct: 0 },
+                            { q: "Trong Cương lĩnh xây dựng đất nước trong thời kỳ quá độ lên CNXH (1991) đã khẳng định đất nước ở thời kỳ người làm chủ là:", options: ["Nhân dân lao động", "Nhà nước", "Tầng lớp tri thức", "Công nhân"], correct: 0 },
+                            { q: "Giai cấp công nhân Việt Nam có sự gắn bó mật thiết với các tầng lớp nhân dân trong xã hội, vì", options: ["sinh ra và lớn lên ở đất nước nông nghiệp, có trình độ sản xuất lạc hậu.", "sinh ra và lớn lên ở đất nước nửa thuộc địa nửa phong kiến.", "có lòng yêu nước, có Đảng lãnh đạo, có hệ tư tưởng khoa học và cách mạng", "xuất thân từ nông dân và các tầng lớp lao động khác, cùng chung lợi ích và khát vọng."], correct: 3 },
+                            { q: "Luận điểm: “Giữa xã hội tư bản chủ nghĩa và xã hội cộng sản chủ nghĩa là một thời kỳ cải biến cách mạng từ xã hội nọ sang xã hội kia…” được C. Mác viết trong tác phảm", options: ["Phê phán cương lĩnh Gôta", "Chống Đuyrinh", "Gia đình thần thánh", "Đấu tranh giai cấp ở Pháp"], correct: 0 }
+                        ]
+                    },
+                    {
+                        title: "CLO3",
+                        questions: [
+                            { q: "Những nhà tư tưởng tiêu biểu của chủ nghĩa xã hội không tưởng phê phán đầu thế kỷ XIX là:", options: ["Grắccơ Babớp, Xanh Ximông, Sáclơ Phuriê", "Xanh Ximông, Sáclơ Phuriê, G. Mably", "Xanh Ximông, Sáclơ Phuriê, Rôbớt Ôoen", "Xanh Ximông, Giăng Mêliê, Rôbớt Ôoen"], correct: 2 },
+                            { q: "Phong trào công nhân dệt ở thành phố Xilêdi, nước Đức diễn ra vào năm", options: ["1841.", "1842.", "1843.", "1844."], correct: 3 },
+                            { q: "Hình thái kinh tế xã hội cộng sản chủ nghĩa chỉ được hình thành thông qua", options: ["phong trào đấu tranh của giai cấp công nhân.", "phong trào đấu tranh của giai cấp nông dân.", "phong trào đấu tranh của giai cấp tư sản.", "cách mạng vô sản dưới sự lãnh đạo của chính đảng của giai cấp công nhân."], correct: 3 },
+                            { q: "Đặc điểm lớn nhất của thời kỳ quá độ lên chủ nghĩa xã hội ở nước ta là:", options: ["từ một nền sản xuất nhỏ là phổ biến quá độ lên chủ nghĩa xã hội không qua chế độ tư bản chủ nghĩa.", "nhiều thành phần xã hội đan xen tồn tại.", "lực lượng sản xuất chưa phát triển.", "năng suất lao động thấp."], correct: 0 },
+                            { q: "“Tôi coi sự phát triển của những hình thái kinh tế xã hội là một quá trình lịch sử tự nhiên” là của:", options: ["C. Mác", "Ph.Ăngghen", "V.I. Lênin", "Hêghen"], correct: 0 }
+                        ]
+                    }
+                ]
+            },
+            {
+                lessonTitle: "BÀI 3",
+                clos: [
+                    {
+                        title: "CLO1",
+                        questions: [
+                            { q: "Động lực của cách mạng xã hội chủ nghĩa là:", options: ["Giai cấp công nhân và giai cấp nông dân", "Giai cấp công nhân mỗi nước và giai cấp công nhân quốc tế", "Giai cấp công nhân vá các tấn lớp nhân dân khác", "Toàn thể dân tộc bị áp bức, bóc lột"], correct: 0 },
+                            { q: "Nguyên nhân sâu xa của cuộc cách mạng xã hội chủ nghĩa là do :", options: ["Sự lớn mạnh của giai cấp công nhân.", "Sự hình thành và vai trò lãnh đạo của Đảng Cộng sản.", "Sự phát triển của lực lượng sản xuất, mâu thuẫn gay gắt với quan hệ sản xuất", "Giai cấp tư sản đã lỗi thời về phương diện lịch sử."], correct: 2 },
+                            { q: "Những biểu hiện cơ bản của tư tưởng xã hội chủ nghĩa là:", options: ["Những ước mơ nguyện vọng về một chế độ xã hội ai cũng có việc làm ai cũng lao động.", "Là quan niệm về một chế độ xã hội mà tư liệu sản xuất đều thuộc về mọi thành viên xã hội.", "Là những tư tưởng về một xã hội, trong đó mọi người đều bình đẳng, có cuộc sống ấm no, tự do, hạnh phúc.", "Tất cả các ý trên."], correct: 3 },
+                            { q: "Thời kỳ quá độ lên chủ nghĩa xã hội là tất yếu đối với:", options: ["Các nước bỏ qua chủ nghĩa tư bản lên chủ nghĩa xã hội", "Các nước tư bản chủ nghĩa kém phát triển lên chủ nghĩa xã hội", "Tất cả các nước đi lên chủ nghĩa xã hội", "Các phương án trên đều sai"], correct: 2 },
+                            { q: "Trong thời kỳ quá độ lên chủ nghĩa xã hội, thuộc tính nói lên đặc trưng chủ yếu nhất của giai cấp công nhân là:", options: ["Là những người lao động trực tiếp hoặc gián tiếp vận hành các công cụ sản xuất có tính chất công nghiệp ngày càng hiện đại và xã hội hóa cao", "Là những người không có hoặc về cơ bản không có tư liệu sản xuất", "Là những người bị bóc lột giá trị thặng dư", "Các phương án trên đều đúng"], correct: 0 },
+                            { q: "Điền từ vào chỗ trống: Nhà nước xã hội chủ nghĩa vừa có bản chất giai cấp công nhân, vừa có tính nhân dân rộng rãi và tính …………sâu sắc", options: ["Giai cấp", "Nhân đạo", "Dân tộc", "Cộng đồng"], correct: 2 },
+                            { q: "Tổ chức đóng vai trò trụ cột trong hệ thống chính trị ở nước ta hiện nay:", options: ["Đảng CS Việt Nam", "Mặt trận tổ quốc", "Nhà nước XHCN", "Các đoàn thể nhân dân"], correct: 2 },
+                            { q: "Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa cần phải kế thừa các yếu tố của chủ nghĩa tư bản:", options: ["Những thành tựu khoa học – công nghệ.", "Khoa học quản lý…buôn bán, hạch toán kinh tế, kinh doanh của của chủ nghĩa tư bản", "Thị trường, vốn…", "Các phương án trên đều đúng"], correct: 3 },
+                            { q: "Chủ nghĩa xã hội khoa học Mác – lênin :", options: ["Là một học thuyết vạch ra được con đường giải phóng triệt để cho nhân loại cần lao, giải phóng triệt để con người", "Xây dựng xã hội cộng sản chủ nghĩa lý tưởng", "Đặt mục tiêu giải phóng triệt để giai cấp vô sản, nhân dân lao động và các dân tộc bị áp bức trên toàn thế giới", "Các phương án trên đều đúng"], correct: 0 },
+                            { q: "Điền từ còn thiếu vào chỗ trống. Đảng cộng sản là .. chiến đấu, là bộ tham mưu của giai cấp công nhân, là biểu hiện tập trung phẩm chất, nguyện vọng, trí tuệ của giai cấp công nhân và của dân tộc.", options: ["Đội tiên phong", "Lực lượng", "Cơ sở", "Cơ quan chỉ huy"], correct: 0 }
+                        ]
+                    },
+                    {
+                        title: "CLO2",
+                        questions: [
+                            { q: "Khái niệm chuyên chính vô sản được Các Mác dùng lần đầu tiên trong tác phẩm:", options: ["Đấu tranh giai cấp ở Pháp", "Góp phần phê phán triết học pháp quyền của Hêghen", "Phê phán cương lĩnh Gô-ta", "Tuyên ngôn của Đảng cộng sản"], correct: 0 },
+                            { q: "Những nhà tư tưởng tiêu biểu của chủ nghĩa xã hội không tưởng phê phán đầu thế kỷ XIX là:", options: ["Grắccơ Babớp, Xanh Ximông, Sáclơ Phuriê", "Xanh Ximông, Sáclơ Phuriê, G. Mably", "Xanh Ximông, Sáclơ Phuriê, Rôbớt Ôoen", "Xanh Ximông, Giăng Mêliê, Rôbớt Ôoen"], correct: 2 },
+                            { q: "Cuộc đấu tranh giai cấp trong thời kỳ quá độ lên chủ nghĩa xã hội diễn ra trong điều kiện mới là giai cấp công nhân đã:", options: ["Giành được chính quyền", "Chưa giành được chính quyền", "Giành quyền được thống trị về mặt kinh tế", "Giành quyền được thống trị về mặt chính trị"], correct: 0 },
+                            { q: "Nước Việt Nam đã tiến lên CNXH trong điều kiện:", options: ["Vừa thuận lợi vừa khó khăn", "Thù trong giặc ngoài", "Tương đối khó khăn", "Tương đối thuận lợi"], correct: 2 },
+                            { q: "Theo quan điểm của chủ nghĩa Mác - Lênin, một trong những nguyên tắc cơ bản để xây dựng khối liên minh giữa giai cấp công nhân với giai cấp nông dân và các tầng lớp hoạt động khác trong cách mạng xã hội chủ nghĩa là phải:", options: ["Đề cao lợi ích của giai cấp nông dân", "Đề cao lợi ích của giai cấp công nhân", "Đề cao lợi ích của các tầng lớp hoạt động khác", "Kết hợp đúng đắn các lợi ích"], correct: 3 },
+                            { q: "Hai phương diện cơ bản của giai cấp công nhân được C.Mác và Ph. Ăngghen xác định là:", options: ["Văn hóa và xã hội", "Giáo dục và đào tạo", "Văn hóa và tư tưởng", "Kinh tế - xã hội và chính trị - xã hội"], correct: 3 },
+                            { q: "Theo nhận định của Chủ tịch Hồ Chí Minh: “Dân chủ là ... là chủ và ... làm chủ.” Điền cụm từ đúng vào đoạn trích trên.", options: ["dân – dân", "dân – Đảng", "dân – nhà nước", "Đảng – chính phủ"], correct: 0 },
+                            { q: "Trong thời kỳ đổi mới, Đảng ta đã xác định vai trò giai cấp công nhân ở nước ta: “Giai cấp công nhân nước ta có sức mệnh lịch sử to lớn: Là giai cấp lãnh đạo cách mạng thông qua đội tiền phong là ……”. Điền từ thích hợp vào chỗ trống", options: ["Đảng Cộng sản Việt Nam", "Đảng Dân chủ Việt Nam", "Đảng Cộng sản Đông Dương", "Đảng Lập Hiến Đông Dương"], correct: 0 },
+                            { q: "Điền từ vào chỗ trống để hoàn thành luận điểm của C. Mác: “ Giữa xã hội tư bản chủ nghĩa và xã hội cộng sản chủ nghĩa là một thời kỳ cải biến cách mạng từ xã hội nọ sang xã hội kia. Thích ứng với thời kỳ ấy là (…) và nhà nước của thời kỳ ấy không thể là cái gì khác hơn nền chuyên chính cách mạng giai cấp vô sản.”", options: ["Thời kỳ quá độ chính trị", "Thời kỳ cải biến nền văn hóa cũ", "Thời kỳ khó khăn, phức tạp và lâu dài", "Thời kì phát triển kinh tế thị trường"], correct: 0 },
+                            { q: "Trong gia đình Việt Nam hiện đại, mô hình người làm chủ gia đình gồm có:", options: ["Người đàn ông - người chồng làm chủ, người phụ nữ - người vợ làm chủ.", "Người đàn ông - người chồng làm chủ, cả hai vợ chồng cùng làm chủ.", "Người phụ nữ - người vợ làm chủ, cả hai vợ chồng cùng làm chủ.", "Người đàn ông - người chồng làm chủ, người phụ nữ - người vợ làm chủ, cả hai vợ chồng cùng làm chủ."], correct: 3 }
+                        ]
+                    },
+                    {
+                        title: "CLO3",
+                        questions: [
+                            { q: "Điền từ thích hợp vào chỗ trống: “Thực hiện chính sách…,củng cố và mở rộng Mặt trận dân tộc thống nhất, tập hợp mọi lực lượng phấn đấu vì sự nghiệp dân giàu, nước mạnh”- Cương lĩnh xây dựng đất nước trong thời kỳ quá độ CNXH(1991).", options: ["Đại đoàn kết dân tộc", "Toàn Đảng toàn dân", "Kiên cường bất khuất", "Công nghiệp hóa-hiện đại hóa"], correct: 0 },
+                            { q: "Đại hội IX của Đảng Cộng sản Việt Nam xác định, quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa ở Việt Nam là bỏ qua", options: ["sự thống trị về mặt kinh tế và chính trị của chủ nghĩa tư bản.", "việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa.", "sự áp bức bóc lột và những thành tựu khoa học kỹ thuật của chủ nghĩa tư bản.", "giai đoạn phát triển cao của chủ nghĩa tư bản."], correct: 1 },
+                            { q: "Cơ cấu xã hội có vị trí quan trọng hàng đầu, chi phối các loại hình cơ cấu xã hội khác là", options: ["cơ cấu xã hội - dân cư.", "cơ cấu xã hội - nghề nghiệp.", "cơ cấu xã hội - giai cấp.", "cơ cấu xã hội - tôn giáo."], correct: 2 },
+                            { q: "“Thực hành dân chủ là cái chìa khoá vạn năng có thể giải quyết mọi khó khăn” quan điểm này là của:", options: ["Mao Trạch Đông", "Hồ Chí Minh", "C. Mác", "Lê Duẩn"], correct: 1 },
+                            { q: "Nhà tư tưởng xã hội chủ nghĩa đã tố cáo quá trình tích luỹ tư bản chủ nghĩa bằng hình ảnh “cừu ăn thịt người” là:", options: ["Nhà không tưởng Pháp Xanh Ximông (1769 - 1825)", "Nhà không tưởng Ý Tômađô Campanella (1568 – 1639)", "Nhà không tưởng Pháp S. Phurie (1772 – 1837)", "Nhà không tưởng Thomas More (1478 – 1535)"], correct: 3 },
+                            { q: "Điền vào chỗ trống. \"Xây dựng giai cấp công nhân lớn mạnh là trách nhiệm của cả hệ thống chính trị, của toàn xã hội và sự nỗ lực vươn lên của bản thân mỗi người công nhân, sự tham gia đóng góp tích cực của ...... \"", options: ["đội ngũ trí thức.", "người chủ Doanh Nghiệp.", "người sử dụng lao động.", "tổ chức Công Đoàn."], correct: 2 },
+                            { q: "Trong thời kỳ quá độ lên chủ nghĩa xã hội khi nền kinh tế tồn tại nhiều thành phần kinh tế thì:", options: ["còn một bộ phận công nhân làm thuê bị bóc lột.", "giai cấp công nhân hoàn toàn không bị bóc lột.", "giai cấp công nhân trở thành người làm chủ.", "chỉ một bộ phận công nhân làm thuê cho tư bản nước ngoài bị bóc lột."], correct: 0 },
+                            { q: "Đâu không phải là đặc trưng của Cương lĩnh xây dựng đất nước trong thời kỳ quá độ lên CNXH (1991):", options: ["Nhà nước nắm quyền điều hành bộ máy chính trị định hướng phát triển của xã hội", "Do nhân dân lao động làm chủ", "Có một nền kinh tế phát triển cao dựa trên lực lượng sản xuất hiện đại", "Có quan hệ hữu nghị và hợp tác với nhân dân tất cả các nước trên thế giới"], correct: 0 },
+                            { q: "Tư tưởng xã hội chủ nghĩa không tưởng Pháp đã có những giá trị nhất định, đó là", options: ["thể hiện tinh thần phê phán, lên án chế độ quân chủ chuyên chế và chế độ tư bản chủ nghĩa.", "phát hiện ra sứ mệnh lịch sử của giai cấp công nhân.", "đề ra được biện pháp xây dựng xã hội mới tốt đẹp.", "phát hiện được quy luật vận động, phát triển của xã hội loài người nói chung và của chủ nghĩa tư bản nói riêng."], correct: 0 },
+                            { q: "Hoàn thiện thể chế kinh tế thị trường định hướng xã hội chủ nghĩa, đẩy mạnh phát triển khoa học và công nghệ nhằm:", options: ["Tạo môi trường và điều kiện thuận lợi để phát huy vai trò của các chủ thể trong khối liên minh.", "Tạo điều kiện thuận lợi để phát triển và duy trì vai trò của các chủ thể trong khối liên minh.", "Tạo nền tảng cho kinh tế, xây dựng nền kinh tế càng phát triển.", "Tạo cơ hội để phát triển và duy trì nền kinh tế."], correct: 0 }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // --- TRẠNG THÁI ỨNG DỤNG ---
+        let currentLessonIndex = -1;
+        let currentCloIndex = -1;
+        let isSubmitted = false;
+
+        // --- DOM ELEMENTS ---
+        const navContainer = document.getElementById('nav-container');
+        const quizContainer = document.getElementById('quiz-container');
+        const quizTitle = document.getElementById('current-quiz-title');
+        const quizDesc = document.getElementById('current-quiz-desc');
+        const quizStatus = document.getElementById('quiz-status');
+        const actionButtons = document.getElementById('action-buttons');
+        const btnSubmit = document.getElementById('btn-submit');
+        const btnReset = document.getElementById('btn-reset');
+        
+        // Mobile Sidebar elements
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+        // Modal Elements
+        const modal = document.getElementById('result-modal');
+        const btnCloseModal = document.getElementById('btn-close-modal');
+        const resultTitle = document.getElementById('result-title');
+        const resultMessage = document.getElementById('result-message');
+        const resultScore = document.getElementById('result-score');
+        const resultIcon = document.getElementById('result-icon');
+
+        // --- MOBILE MENU LOGIC ---
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            if (sidebarOverlay.classList.contains('hidden')) {
+                sidebarOverlay.classList.remove('hidden');
+                // Nhỏ xíu delay để hiệu ứng opacity ăn khớp
+                setTimeout(() => sidebarOverlay.classList.add('opacity-100'), 10);
+            } else {
+                sidebarOverlay.classList.remove('opacity-100');
+                setTimeout(() => sidebarOverlay.classList.add('hidden'), 300); // 300ms bằng thời gian transition
+            }
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // --- KHỞI TẠO MENU ---
+        function renderNavigation() {
+            navContainer.innerHTML = '';
+            quizData.forEach((lesson, lIndex) => {
+                // Nhóm bài học
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'mb-6';
+                
+                const groupTitle = document.createElement('h3');
+                groupTitle.className = 'text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3';
+                groupTitle.textContent = lesson.lessonTitle;
+                groupDiv.appendChild(groupTitle);
+
+                const ul = document.createElement('ul');
+                ul.className = 'space-y-1';
+
+                lesson.clos.forEach((clo, cIndex) => {
+                    const li = document.createElement('li');
+                    
+                    const btn = document.createElement('button');
+                    btn.className = `w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        currentLessonIndex === lIndex && currentCloIndex === cIndex
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                            : 'text-gray-600 hover:bg-gray-100'
+                    }`;
+                    btn.innerHTML = `<span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 ${currentLessonIndex === lIndex && currentCloIndex === cIndex ? 'text-blue-600' : 'text-gray-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        ${clo.title}
+                    </span>`;
+                    
+                    btn.onclick = () => loadQuiz(lIndex, cIndex);
+                    li.appendChild(btn);
+                    ul.appendChild(li);
+                });
+
+                groupDiv.appendChild(ul);
+                navContainer.appendChild(groupDiv);
+            });
+        }
+
+        // --- HIỂN THỊ CÂU HỎI ---
+        function loadQuiz(lessonIndex, cloIndex) {
+            currentLessonIndex = lessonIndex;
+            currentCloIndex = cloIndex;
+            isSubmitted = false;
+            
+            // Cập nhật giao diện menu
+            renderNavigation();
+
+            // Tự động thu gọn menu trên điện thoại sau khi chọn bài
+            if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+                toggleSidebar();
+            }
+
+            const currentData = quizData[lessonIndex].clos[cloIndex];
+            
+            quizTitle.textContent = `${quizData[lessonIndex].lessonTitle} - ${currentData.title}`;
+            quizDesc.textContent = `Tổng cộng ${currentData.questions.length} câu hỏi. Chúc bạn làm bài tốt.`;
+            updateStatus('Đang làm');
+            actionButtons.classList.remove('hidden');
+            actionButtons.classList.add('flex');
+            
+            btnSubmit.disabled = false;
+            btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            quizContainer.innerHTML = '';
+            
+            currentData.questions.forEach((qObj, qIndex) => {
+                const qBlock = document.createElement('div');
+                qBlock.className = 'bg-white rounded-xl shadow-sm border border-gray-200 p-5 md:p-6 mb-6 transition-all question-block';
+                qBlock.id = `qblock-${qIndex}`;
+
+                // Header câu hỏi
+                const qHeader = document.createElement('div');
+                qHeader.className = 'flex items-start gap-4 mb-4';
+                qHeader.innerHTML = `
+                    <span class="flex-shrink-0 bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded-md text-sm border border-blue-200">
+                        Câu ${qIndex + 1}
+                    </span>
+                    <h3 class="text-gray-800 font-medium leading-relaxed">${qObj.q}</h3>
+                `;
+                qBlock.appendChild(qHeader);
+
+                // Options
+                const optionsGrid = document.createElement('div');
+                optionsGrid.className = 'space-y-3 mt-4 ml-0 md:ml-[3.25rem]';
+
+                qObj.options.forEach((optText, optIndex) => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center cursor-pointer group relative';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = `question-${qIndex}`;
+                    input.value = optIndex;
+                    input.className = 'radio-custom absolute opacity-0 w-0 h-0';
+
+                    const customBox = document.createElement('div');
+                    customBox.className = 'w-full p-4 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 option-box';
+                    customBox.innerHTML = `
+                        <div class="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center flex-shrink-0 bg-white circle-indicator">
+                            <div class="w-2.5 h-2.5 rounded-full bg-blue-600 hidden inner-dot"></div>
+                        </div>
+                        <span class="text-sm md:text-base">${optText}</span>
+                    `;
+
+                    // Logic hiển thị nút check
+                    input.addEventListener('change', () => {
+                        if(isSubmitted) return;
+                        
+                        // Reset all dots in this question
+                        const allDots = optionsGrid.querySelectorAll('.inner-dot');
+                        allDots.forEach(dot => dot.classList.add('hidden'));
+                        
+                        // Show dot for selected
+                        if(input.checked) {
+                            customBox.querySelector('.inner-dot').classList.remove('hidden');
+                        }
+                    });
+
+                    label.appendChild(input);
+                    label.appendChild(customBox);
+                    optionsGrid.appendChild(label);
+                });
+
+                qBlock.appendChild(optionsGrid);
+                
+                // Feedback message (ẩn ban đầu)
+                const feedback = document.createElement('div');
+                feedback.className = 'mt-4 ml-0 md:ml-[3.25rem] p-3 rounded-md text-sm hidden font-medium feedback-msg flex items-center gap-2';
+                qBlock.appendChild(feedback);
+
+                quizContainer.appendChild(qBlock);
+            });
+            
+            // Cuộn lên đầu
+            document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateStatus(text) {
+            quizStatus.textContent = `Trạng thái: ${text}`;
+            if (text === 'Đã nộp') {
+                quizStatus.className = 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200';
+            } else {
+                quizStatus.className = 'px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200';
+            }
+        }
+
+        // --- XỬ LÝ CHẤM ĐIỂM ---
+        btnSubmit.addEventListener('click', () => {
+            if (currentLessonIndex === -1 || isSubmitted) return;
+
+            const currentData = quizData[currentLessonIndex].clos[currentCloIndex];
+            let score = 0;
+            let unAnswered = 0;
+
+            currentData.questions.forEach((qObj, qIndex) => {
+                const qBlock = document.getElementById(`qblock-${qIndex}`);
+                const selected = document.querySelector(`input[name="question-${qIndex}"]:checked`);
+                const feedback = qBlock.querySelector('.feedback-msg');
+                const allLabels = qBlock.querySelectorAll('label');
+
+                // Vô hiệu hóa inputs
+                qBlock.querySelectorAll('input').forEach(inp => inp.disabled = true);
+
+                if (!selected) {
+                    unAnswered++;
+                    feedback.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Bạn chưa trả lời câu hỏi này. Đáp án đúng: <strong>${qObj.options[qObj.correct]}</strong>`;
+                    feedback.className = 'mt-4 ml-0 md:ml-[3.25rem] p-3 rounded-md text-sm font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 flex items-start gap-2 block';
+                    qBlock.classList.add('border-yellow-300');
+                    
+                    // Đánh dấu đáp án đúng
+                    allLabels[qObj.correct].querySelector('.option-box').classList.add('bg-green-50', 'border-green-400');
+                } else {
+                    const selectedVal = parseInt(selected.value);
+                    if (selectedVal === qObj.correct) {
+                        score++;
+                        feedback.innerHTML = `<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Chính xác!`;
+                        feedback.className = 'mt-4 ml-0 md:ml-[3.25rem] p-3 rounded-md text-sm font-medium bg-green-50 text-green-700 border border-green-200 flex items-center gap-2 block';
+                        qBlock.classList.add('border-green-300');
+                        selected.nextElementSibling.classList.add('bg-green-50', 'border-green-500');
+                        selected.nextElementSibling.querySelector('.circle-indicator').classList.add('border-green-500');
+                        selected.nextElementSibling.querySelector('.inner-dot').classList.add('bg-green-600');
+                    } else {
+                        feedback.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Sai. Đáp án đúng: <strong>${qObj.options[qObj.correct]}</strong>`;
+                        feedback.className = 'mt-4 ml-0 md:ml-[3.25rem] p-3 rounded-md text-sm font-medium bg-red-50 text-red-700 border border-red-200 flex items-start gap-2 block';
+                        qBlock.classList.add('border-red-300');
+                        
+                        selected.nextElementSibling.classList.add('bg-red-50', 'border-red-500');
+                        selected.nextElementSibling.querySelector('.circle-indicator').classList.add('border-red-500');
+                        selected.nextElementSibling.querySelector('.inner-dot').classList.add('bg-red-600');
+                        
+                        // Show correct answer
+                        allLabels[qObj.correct].querySelector('.option-box').classList.add('bg-green-50', 'border-green-400', 'border-dashed');
+                    }
+                }
+            });
+
+            isSubmitted = true;
+            updateStatus('Đã nộp');
+            btnSubmit.disabled = true;
+            btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+
+            showResultModal(score, currentData.questions.length);
+        });
+
+        // --- RESET BÀI LÀM ---
+        btnReset.addEventListener('click', () => {
+            if (currentLessonIndex === -1) return;
+            loadQuiz(currentLessonIndex, currentCloIndex);
+        });
+
+        // --- XỬ LÝ MODAL KẾT QUẢ ---
+        function showResultModal(score, total) {
+            const percentage = (score / total) * 100;
+            
+            resultScore.textContent = `${score}/${total}`;
+            
+            if (percentage === 100) {
+                resultIcon.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 bg-green-100 text-green-600';
+                resultIcon.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                resultTitle.textContent = "Tuyệt vời!";
+                resultTitle.className = "text-2xl font-bold text-green-600 mb-2";
+            } else if (percentage >= 50) {
+                resultIcon.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 bg-yellow-100 text-yellow-600';
+                resultIcon.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg>`;
+                resultTitle.textContent = "Khá tốt!";
+                resultTitle.className = "text-2xl font-bold text-yellow-600 mb-2";
+            } else {
+                resultIcon.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600';
+                resultIcon.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                resultTitle.textContent = "Cần cố gắng!";
+                resultTitle.className = "text-2xl font-bold text-red-600 mb-2";
+            }
+
+            modal.classList.remove('hidden');
+            // Timeout để trigger CSS transition
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        btnCloseModal.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Init
+        renderNavigation();
+
+    </script>
+</body>
+</html>
